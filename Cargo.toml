@@ -9,5 +9,5 @@ authors = ["John Drinkwater <john@nextraweb.com>"]
 [dependencies]
 encoding = "0.2.33"
 lazy_static = "0.1.*"
-regex = "0.1.80"
+regex = "0.2"
 rustc-serialize = "0.3"

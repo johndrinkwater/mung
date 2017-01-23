@@ -327,13 +327,13 @@ fn decode_quoted_printable<'a>( s: &'a str, charset: &'a str ) -> Cow<'a, str> {
 			match cap.name( "encoded" ) {
 				Some( i ) => {
 
-					let bytelist: Vec<u8> = i.chunks( 3 ).map(
+					let bytelist: Vec<u8> = i.as_bytes( ).chunks( 3 ).map(
 						|x| u32::from_str_radix( std::str::from_utf8( &x[ 1..3 ] ).unwrap( ), 16 ).unwrap_or( 0 ) as u8
 						).collect( );
                     bytelist
 				},
 				None => {
-                    let character = cap.name( "char" ).unwrap_or_default( );
+					let character = cap.name( "char" ).unwrap( ).as_bytes( );
 					if character == [95] {
 						// _ → ‘ ’ // Spec says, _ should always decode to x20, whatever the charset
 						vec![32]
@@ -342,8 +342,8 @@ fn decode_quoted_printable<'a>( s: &'a str, charset: &'a str ) -> Cow<'a, str> {
 					}
 				}
 			}
+		} ).into_owned( );
 
-		} );
 		let allo = charsetengine.decode( &allo, DecoderTrap::Replace ).unwrap_or( "�".to_string( ) );
 
 		// TODO Make � replacement an option
@@ -390,11 +390,11 @@ pub fn decode_rfc2047<'a>( s: &'a str ) -> Cow<'a, str> {
 
 		let mut allo = s.to_string( );
 
-		allo = LINEAR_WHITESPACE.replace_all( &allo, "?==?" );
+		allo = LINEAR_WHITESPACE.replace_all( &allo, "?==?" ).into_owned( );
 		allo = ENCODED_WORD.replace_all( &allo, |cap: &Captures| {
-				let charset		= cap.at( 1 ).unwrap_or( "iso-8859-1" ).to_lowercase( );
-				let encoding	= cap.at( 2 ).unwrap_or( "" ).to_lowercase( );
-				let encoded		= cap.at( 3 ).unwrap_or( "" );
+				let charset		= cap.get( 1 ).unwrap( ).as_str( ).to_lowercase( );
+				let encoding	= cap.get( 2 ).unwrap( ).as_str( ).to_lowercase( );
+				let encoded		= cap.get( 3 ).unwrap( ).as_str( );
 
 				if encoding == "b" {
 					let debased = match encoded.from_base64( ) {
@@ -423,7 +423,7 @@ pub fn decode_rfc2047<'a>( s: &'a str ) -> Cow<'a, str> {
 					format!( "{}", encoded )
 				}
 
-			} );
+			} ).into_owned( );
 
 		// TODO Make � replacement an option
 		allo.into( )
@@ -460,7 +460,7 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 		static ref HAS_ENTITIES:	Regex = Regex::new( r"&#?[a-zA-Z0-9]+;" ).unwrap( );
 		static ref ENTITIES_NAME:	Regex = Regex::new( r"&([a-zA-Z0-9]+);" ).unwrap( );
 		static ref ENTITIES_DEC:	Regex = Regex::new( r"&#(\d+);" ).unwrap( );
-		static ref ENTITIES_HEX:	Regex = Regex::new( r"&#x([:xdigit:]+);" ).unwrap( );
+		static ref ENTITIES_HEX:	Regex = Regex::new( r"&#x([[:xdigit:]]+);" ).unwrap( );
 	}
 
 	if HAS_ENTITIES.is_match ( &s ) {
@@ -469,25 +469,25 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 
 		while ENTITIES_NAME.is_match( &allo ) {
 			allo = ENTITIES_NAME.replace_all( &allo, |cap: &Captures| {
-					let origin = cap.at( 1 ).unwrap_or( "" );
+					let origin = cap.get( 1 ).unwrap( ).as_str( );
 					match ENTITIES.get( origin ) {
 						Some( entity ) => format!( "{}", entity ),
 						// XXX Debugging, this line needs to be replaced to output nothing, to prevent loooops
 						// None => format!( "〖{}〗", origin )
 						None => format!( "{}", origin )
 					}
-				} );
+				} ).into_owned( );
 		}
 		while ENTITIES_DEC.is_match ( &allo ) {
 			allo = ENTITIES_DEC.replace_all( &allo, |cap: &Captures| {
-				format!( "{}", std::char::from_u32( cap.at( 1 ).unwrap_or( "65533"
-					).parse( ).unwrap_or( 65533 ) ).unwrap_or( '�' ) ) } );
+				format!( "{}", std::char::from_u32( cap.get( 1 ).unwrap( ).as_str(
+					).parse( ).unwrap_or( 65533 ) ).unwrap_or( '�' ) ) } ).into_owned( );
         }
 		while ENTITIES_HEX.is_match ( &allo ) {
 			allo = ENTITIES_HEX.replace_all( &allo, |cap: &Captures| {
 				format!( "{}", std::char::from_u32( u32::from_str_radix(
-					cap.at( 1 ).unwrap_or( "FFFD" ), 16).unwrap_or( 65533
-					) ).unwrap_or( '�' ) ) } );
+					cap.get( 1 ).unwrap( ).as_str( ), 16).unwrap_or( 65533
+					) ).unwrap_or( '�' ) ) } ).into_owned( );
         }
 
 		// TODO Make � replacement an option
