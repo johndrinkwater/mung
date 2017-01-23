@@ -20,7 +20,7 @@ use regex::{Regex, Captures};
 lazy_static! {
 	// TODO import/injest from https://html.spec.whatwg.org/entities.json at compile time
 	//
-    static ref ENTITIES: HashMap<&'static str, &'static str> = {
+	static ref ENTITIES: HashMap<&'static str, &'static str> = {
 		let mut e = HashMap::new( );
 		/* HTML 4 https://www.w3.org/TR/html4/sgml/entities.html */
 		/* ISO 8859-1 */
@@ -302,8 +302,8 @@ lazy_static! {
 
 		/* HTML 5 … no, who thought in the age of Unicode we’d need more of those entities https://dev.w3.org/html5/html-author/charref */
 
-        e
-    };
+		e
+	};
 }
 
 // This demungs email headers of quoted printable escapement
@@ -330,7 +330,7 @@ fn decode_quoted_printable<'a>( s: &'a str, charset: &'a str ) -> Cow<'a, str> {
 					let bytelist: Vec<u8> = i.as_bytes( ).chunks( 3 ).map(
 						|x| u32::from_str_radix( std::str::from_utf8( &x[ 1..3 ] ).unwrap( ), 16 ).unwrap_or( 0 ) as u8
 						).collect( );
-                    bytelist
+					bytelist
 				},
 				None => {
 					let character = cap.name( "char" ).unwrap( ).as_bytes( );
@@ -502,8 +502,8 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 mod tests {
 	use super::*;
 
-    #[test]
-    fn test_decode_entities( ) {
+	#[test]
+	fn test_decode_entities( ) {
 
 		assert_eq!( decode_entities( "" ),				"" );
 		assert_eq!( decode_entities( "test." ),			"test." );
@@ -520,8 +520,8 @@ mod tests {
 
 	}
 
-    #[test]
-    fn test_decode_entities_failure( ) {
+	#[test]
+	fn test_decode_entities_failure( ) {
 
 		assert_ne!( decode_entities( "" ), " " );
 		assert_ne!( decode_entities( "&amp;" ), "&amp;" );
@@ -619,7 +619,7 @@ mod tests {
 		assert_eq!( decode_rfc2047( "=?zalgo-he-comes?q?=AF?= unknown charset" ), "unknown charset" );
 	}
 
-    use super::decode_quoted_printable;
+	use super::decode_quoted_printable;
 
 	#[test]
 	fn test_decode_rfc2047_quoted_printable( ) {
@@ -632,6 +632,6 @@ mod tests {
 		assert_eq!( decode_quoted_printable( "a_b", "ISO-8859-1" ),	"a b" );
 		assert_eq!( decode_quoted_printable( "dog", "ISO-8859-1" ),	"dog" );
 		assert_eq!( decode_quoted_printable( "___", "ISO-8859-1" ),	"   " );
-     }
+	}
 
 }
