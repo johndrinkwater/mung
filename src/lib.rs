@@ -354,6 +354,55 @@ fn decode_quoted_printable<'a>( s: &'a str, charset: &'a str ) -> Cow<'a, str> {
 }
 
 
+/// Decodes URL character sequences that are escaped into their UTF-8 form
+///
+/// # Examples
+///
+/// Can be called with `&' str`
+///
+/// ```
+/// use mung::decode_rfc1738;
+/// let title = decode_rfc1738( "%25" );
+/// ```
+///
+/// or `String`
+///
+/// ```
+/// use mung::decode_rfc1738;
+/// let incoming_html = "/end_point/%3Fsource%3D%2Fdata%20here".to_string( );
+/// let title = decode_rfc1738( &incoming_html );
+/// ```
+pub fn decode_rfc1738<'a>( s: &'a str ) -> Cow<'a, str> {
+
+	lazy_static! {
+		static ref HAS_TRIPLETS: Regex = Regex::new( r"%[a-zA-Z0-9][a-zA-Z0-9]" ).unwrap( );
+		static ref TRIPLETS: regex::bytes::Regex = regex::bytes::Regex::new( r"%([a-zA-Z0-9][a-zA-Z0-9])" ).unwrap( );
+	}
+
+	if HAS_TRIPLETS.is_match( &s ) {
+
+		// TODO replace this call with a strict encoding type
+		let charsetengine = encoding_from_whatwg_label( "utf-8" ).unwrap_or( encoding::all::UTF_8 );
+		// TODO spec strictly says US-ASCII, so.. this is wrong :^)
+		let allo = s.to_string( ).into_bytes( );
+		let allo: Vec<u8> = TRIPLETS.replace_all( &allo, |cap: &regex::bytes::Captures| {
+
+				let bytelist: Vec<u8> = cap.get( 1 ).unwrap( ).as_bytes( ).chunks( 2 ).map(
+					|x| u32::from_str_radix( std::str::from_utf8( &x ).unwrap( ), 16 ).unwrap_or( 65533 ) as u8
+					).collect( );
+				bytelist
+			} ).into_owned( );
+
+		let allo = charsetengine.decode( &allo, DecoderTrap::Replace ).unwrap_or( "�".to_string( ) );
+
+		// TODO Make � replacement an option
+		allo.into( )
+	} else {
+		s.into( )
+	}
+}
+
+
 /// Decodes RFC 2047 encoded words into their UTF-8 form
 ///
 /// See: Message Header Extensions for Non-ASCII Text https://tools.ietf.org/html/rfc2047
@@ -517,6 +566,21 @@ mod tests {
 		assert_eq!( decode_entities( "&amp;#x2665;" ),	"♥" );
 		assert_eq!( decode_entities( "&#x9999999;" ),	"�" );
 
+	}
+
+	#[test]
+	fn test_decode_rfc1738( ) {
+		assert_eq!( decode_rfc1738( "%25" ),	"%" );
+
+		// From https://www.w3.org/International/O-URL-code.html
+		assert_eq!( decode_rfc1738( "Fran%c3%a7ois" ),	"François" );
+
+		// From PSN Store URLs
+		assert_eq!( decode_rfc1738( "assassin%27s-creed-chronicles-china" ),	"assassin\'s-creed-chronicles-china" );
+		assert_eq!( decode_rfc1738( "assassin%e2%80%99s-creed-chronicles-russia" ),	"assassin’s-creed-chronicles-russia" );
+
+		// Our doc
+		assert_eq!( decode_rfc1738( "/end_point/%3Fsource%3D%2Fdata%20here" ),	"/end_point/?source=/data here" );
 	}
 
 	#[test]
