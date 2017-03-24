@@ -386,7 +386,7 @@ pub fn decode_rfc2047<'a>( s: &'a str ) -> Cow<'a, str> {
 		// RFC 822 linear-white-space = 1*([CRLF] SPACE / HTAB)
 		static ref LINEAR_WHITESPACE: Regex = Regex::new( r"\?=[\n\r\t ]+=\?" ).unwrap( );
 	}
-	if ENCODED_WORD.is_match ( &s ) {
+	if ENCODED_WORD.is_match( &s ) {
 
 		let mut allo = s.to_string( );
 
@@ -463,11 +463,12 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 		static ref ENTITIES_HEX:	Regex = Regex::new( r"&#x([[:xdigit:]]+);" ).unwrap( );
 	}
 
-	if HAS_ENTITIES.is_match ( &s ) {
+	if HAS_ENTITIES.is_match( &s ) {
 
 		let mut allo = s.to_string( );
 
-		while ENTITIES_NAME.is_match( &allo ) {
+		while HAS_ENTITIES.is_match( &allo ) {
+
 			allo = ENTITIES_NAME.replace_all( &allo, |cap: &Captures| {
 					let origin = cap.get( 1 ).unwrap( ).as_str( );
 					match ENTITIES.get( origin ) {
@@ -477,18 +478,16 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 						None => format!( "{}", origin )
 					}
 				} ).into_owned( );
-		}
-		while ENTITIES_DEC.is_match ( &allo ) {
+
 			allo = ENTITIES_DEC.replace_all( &allo, |cap: &Captures| {
 				format!( "{}", std::char::from_u32( cap.get( 1 ).unwrap( ).as_str(
 					).parse( ).unwrap_or( 65533 ) ).unwrap_or( '�' ) ) } ).into_owned( );
-        }
-		while ENTITIES_HEX.is_match ( &allo ) {
+
 			allo = ENTITIES_HEX.replace_all( &allo, |cap: &Captures| {
 				format!( "{}", std::char::from_u32( u32::from_str_radix(
 					cap.get( 1 ).unwrap( ).as_str( ), 16).unwrap_or( 65533
 					) ).unwrap_or( '�' ) ) } ).into_owned( );
-        }
+		}
 
 		// TODO Make � replacement an option
 		allo.into( )
