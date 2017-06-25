@@ -354,7 +354,8 @@ fn decode_quoted_printable<'a>( s: &'a str, charset: &'a str ) -> Cow<'a, str> {
 }
 
 
-/// Decodes URL character sequences that are escaped into their UTF-8 form
+/// Decodes URL character sequences that are percentage escaped (%25) into their UTF-8 form
+/// See: Uniform Resource Locators (URL) https://tools.ietf.org/html/rfc1738#section-2.2
 ///
 /// # Examples
 ///
@@ -383,7 +384,6 @@ pub fn decode_rfc1738<'a>( s: &'a str ) -> Cow<'a, str> {
 
 		// TODO replace this call with a strict encoding type
 		let charsetengine = encoding_from_whatwg_label( "utf-8" ).unwrap_or( encoding::all::UTF_8 );
-		// TODO spec strictly says US-ASCII, so.. this is wrong :^)
 		let allo = s.to_string( ).into_bytes( );
 		let allo: Vec<u8> = TRIPLETS.replace_all( &allo, |cap: &regex::bytes::Captures| {
 
