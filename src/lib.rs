@@ -515,8 +515,15 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 	if HAS_ENTITIES.is_match( &s ) {
 
 		let mut allo = s.to_string( );
+		// TODO default to 1 loop, let user request more
+		let mut dontgetstuck = 3;
 
 		while HAS_ENTITIES.is_match( &allo ) {
+
+			if dontgetstuck <= 0 {
+				break;
+			}
+			dontgetstuck -= 1;
 
 			allo = ENTITIES_NAME.replace_all( &allo, |cap: &Captures| {
 					let origin = cap.get( 1 ).unwrap( ).as_str( );
@@ -524,7 +531,7 @@ pub fn decode_entities<'a>( s: &'a str ) -> Cow<'a, str> {
 						Some( entity ) => format!( "{}", entity ),
 						// XXX Debugging, this line needs to be replaced to output nothing, to prevent loooops
 						// None => format!( "〖{}〗", origin )
-						None => format!( "{}", origin )
+						None => format!( "&{};", origin )
 					}
 				} ).into_owned( );
 
@@ -557,8 +564,11 @@ mod tests {
 		assert_eq!( decode_entities( "test." ),			"test." );
 		assert_eq!( decode_entities( "&amp;" ),			"&" );
 		assert_eq!( decode_entities( "&amp;amp;" ),		"&" );
+		assert_eq!( decode_entities( "&amp;amp;amp;" ),	"&" );
 		assert_eq!( decode_entities( "&#38;" ),			"&" );
 		assert_eq!( decode_entities( "&#38;#38;" ),		"&" );
+		assert_eq!( decode_entities( "&amp;#38;#38;" ),	"&" );
+		assert_eq!( decode_entities( "&#38;hearts;" ),	"♥" );
 		assert_eq!( decode_entities( "&amp;lt;" ),		"<" );
 		assert_eq!( decode_entities( "&#8800;" ),		"≠" );
 		assert_eq!( decode_entities( "&amp;#8800;" ),	"≠" );
@@ -589,11 +599,12 @@ mod tests {
 		assert_ne!( decode_entities( "" ), " " );
 		assert_ne!( decode_entities( "&amp;" ), "&amp;" );
 		assert_ne!( decode_entities( "&amp;amp;" ), "&amp;amp;" );
+		assert_ne!( decode_entities( "&amp;amp;amp;amp;" ),	"&" ); // stops on last &amp;
 		assert_ne!( decode_entities( "&#38;" ), "&#38;" );
 		assert_ne!( decode_entities( "&#38;#38;" ), "&#38;" );
 		assert_ne!( decode_entities( "&#38;#38;" ), "&#38;#38;" );
 		assert_ne!( decode_entities( "&amp;lt;" ), "&amp;lt;" );
-		assert_eq!( decode_entities( "&fred;" ), "fred" );
+		assert_ne!( decode_entities( "&fred;" ), "fred" );
 		assert_ne!( decode_entities( "&#8800;" ), "&#8800;" );
 		assert_ne!( decode_entities( "&amp;#8800;" ), "&amp;#8800;" );
 		assert_ne!( decode_entities( "&#x2665;" ), "&#x2665;" );
@@ -650,8 +661,12 @@ mod tests {
 		assert_eq!( decode_rfc2047( "Subject: =?big5?Q?=A4=A3=AA=E1=BF=FA=A5u=AA=E1=B4X=A4=C0=AE=C9=B6=A1?=" ),
 									"Subject: 不花錢只花幾分時間" );
 
-		// From a spam email...
+		// From spam email...
 		assert_eq!( decode_rfc2047( "From: =?utf-8?Q?=E9=A6=99=E6=B8=AF=E8=BF=9B=E5=8F=A3?= <hk_import4@163.com>" ), "From: 香港进口 <hk_import4@163.com>" );
+
+		assert_eq!( decode_rfc2047( "Subject: =?iso-2022-jp?B?GyRCIVpIL0NtPXE8dT8uIVsbKEI=?=" ), "Subject: 【発注書受信】" );
+
+
 	}
 
 	#[test]
