@@ -1,10 +1,17 @@
 [package]
 name = "mung"
 description = "A small crate to remove or introduce SGML|XML|HTML entities, escape urlchars, CSS variables etc"
+documentation = "https://github.com/johndrinkwater/mung"
+homepage = "https://github.com/johndrinkwater/mung"
+repository = "https://github.com/johndrinkwater/mung"
 keywords = [ "encode", "decode", "entities", "escapement" ]
 license = "CC0-1.0"
 version = "0.1.0"
 authors = ["John Drinkwater <john@nextraweb.com>"]
+exclude = [
+	"TODO",
+	"data/*"
+]
 
 [dependencies]
 encoding = "0.2.33"
